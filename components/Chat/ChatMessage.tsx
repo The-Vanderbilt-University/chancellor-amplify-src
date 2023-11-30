@@ -5,6 +5,7 @@ import {
     IconRobot,
     IconTrash,
     IconWriting,
+    IconDownload,
     IconUser,
 } from '@tabler/icons-react';
 import { FiCommand } from "react-icons/fi";
@@ -23,6 +24,7 @@ import AssistantMessageEditor from "@/components/Chat/ChatContentBlocks/Assistan
 import {Style} from "css-to-react-native";
 import { Prompt } from "@/types/prompt";
 import { Stars } from "@/components/Chat/Stars";
+import {DownloadModal} from "@/components/Download/DownloadModal";
 
 
 
@@ -113,6 +115,7 @@ export const ChatMessage: FC<Props> = memo(({
     //     },
     // ];
 
+    const [isDownloadDialogVisible, setIsDownloadDialogVisible] = useState<boolean>(false);
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [messageContent, setMessageContent] = useState(message.content);
@@ -335,6 +338,23 @@ export const ChatMessage: FC<Props> = memo(({
             style={{ overflowWrap: 'anywhere' }}
         >
 
+            {isDownloadDialogVisible && (
+                <DownloadModal
+                    includeConversations={false}
+                    includePrompts={false}
+                    includeFolders={false}
+                    showHeaders={false}
+                    showInclude={false}
+                    selectedMessages={[message]}
+                    selectedConversations={selectedConversation ? [selectedConversation] : []}
+                    onCancel={() => {
+                        setIsDownloadDialogVisible(false);
+                    }}
+                    onDownloadReady={function (url: string): void {
+
+                    }}/>
+            )}
+
             {editModalVisible && (
                 <VariableModal
                     models={[]}
@@ -400,26 +420,41 @@ export const ChatMessage: FC<Props> = memo(({
                             )}
 
                             {!isEditing && (
-                                <div
-                                    className="md:-mr-8 ml-1 md:ml-0 flex flex-col md:flex-row gap-4 md:gap-1 items-center md:items-start justify-end md:justify-start">
+                                <div className="md:-mr-8 ml-1 md:ml-0 flex flex-col md:flex-col gap-4 md:gap-1 items-center md:items-start justify-end md:justify-start">
+                                {/*<div*/}
+                                {/*    className="md:-mr-8 ml-1 md:ml-0 flex flex-col md:flex-row gap-4 md:gap-1 items-center md:items-start justify-end md:justify-start">*/}
+                                    <div>
                                     <button
                                         className="invisible group-hover:visible focus:visible text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                         onClick={copyOnClick}
                                     >
                                         <IconCopy size={20} />
                                     </button>
+                                    </div>
+                                    <div>
+                                    <button
+                                        className="invisible group-hover:visible focus:visible text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                        onClick={()=>setIsDownloadDialogVisible(true)}
+                                    >
+                                        <IconDownload size={20} />
+                                    </button>
+                                    </div>
+                                    <div>
                                     <button
                                         className="invisible group-hover:visible focus:visible text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                         onClick={toggleEditing}
                                     >
                                         <IconEdit size={20} />
                                     </button>
+                                    </div>
+                                    <div>
                                     <button
                                         className="invisible group-hover:visible focus:visible text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                         onClick={handleDeleteMessage}
                                     >
                                         <IconTrash size={20} />
                                     </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -488,7 +523,7 @@ export const ChatMessage: FC<Props> = memo(({
                                 )}
 
                                 <div
-                                    className="md:-mr-8 ml-1 md:ml-0 flex flex-col md:flex-row gap-4 md:gap-1 items-center md:items-start justify-end md:justify-start">
+                                    className="md:-mr-8 ml-1 md:ml-0 flex flex-col md:flex-col gap-4 md:gap-1 items-center md:items-start justify-end md:justify-start">
                                     {messagedCopied ? (
                                         <IconCheck
                                             size={20}
@@ -502,6 +537,12 @@ export const ChatMessage: FC<Props> = memo(({
                                             <IconCopy size={20} />
                                         </button>
                                     )}
+                                    <button
+                                        className="invisible group-hover:visible focus:visible text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                        onClick={()=>setIsDownloadDialogVisible(true)}
+                                    >
+                                        <IconDownload size={20} />
+                                    </button>
                                     <button
                                         className="invisible group-hover:visible focus:visible text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                         onClick={toggleEditing}

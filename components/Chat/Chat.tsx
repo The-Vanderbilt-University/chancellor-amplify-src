@@ -1,4 +1,4 @@
-import {IconClearAll, IconSettings, IconShare} from '@tabler/icons-react';
+import {IconClearAll, IconSettings, IconShare, IconDownload} from '@tabler/icons-react';
 import {
     MutableRefObject,
     memo,
@@ -56,6 +56,9 @@ import {getToolMetadata} from "@/utils/app/tools";
 import {findWorkflowPattern} from "@/utils/workflow/aiflow";
 import {TagsList} from "@/components/Chat/TagsList";
 import {ShareAnythingModal} from "@/components/Share/ShareAnythingModal";
+import {Assistant, DEFAULT_ASSISTANT} from "@/types/assistant";
+import { sendChat as assistantChat } from "@/services/assistantService";
+import {DownloadModal} from "@/components/Download/DownloadModal";
 
 interface Props {
     stopConversationRef: MutableRefObject<boolean>;
@@ -67,6 +70,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
         const {
             state: {
                 selectedConversation,
+                selectedAssistant,
                 conversations,
                 folders,
                 models,
@@ -79,6 +83,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                 prompts,
                 defaultModelId,
                 featureFlags,
+                workspaceMetadata
             },
             handleUpdateConversation,
             handleCustomLinkClick,
@@ -94,6 +99,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
         const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
         const [showSettings, setShowSettings] = useState<boolean>(false);
         const [isPromptTemplateDialogVisible, setIsPromptTemplateDialogVisible] = useState<boolean>(false);
+        const [isDownloadDialogVisible, setIsDownloadDialogVisible] = useState<boolean>(false);
         const [isShareDialogVisible, setIsShareDialogVisible] = useState<boolean>(false);
         const [variables, setVariables] = useState<string[]>([]);
         const [showScrollDownButton, setShowScrollDownButton] =
@@ -336,7 +342,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
 
 
         const handleSend = useCallback(
-            async (message: Message, deleteCount = 0, plugin: Plugin | null = null, existingResponse = null) => {
+            async (message: Message, deleteCount = 0, plugin: Plugin | null = null, existingResponse = null, rootPrompt:string|null = null) => {
                 return new Promise(async (resolve, reject) => {
                     if (selectedConversation) {
 
@@ -368,7 +374,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                             model: updatedConversation.model,
                             messages: updatedConversation.messages,
                             key: apiKey,
-                            prompt: updatedConversation.prompt,
+                            prompt: rootPrompt || updatedConversation.prompt,
                             temperature: updatedConversation.temperature,
                         };
 
@@ -678,6 +684,24 @@ export const Chat = memo(({stopConversationRef}: Props) => {
             return [...documentVariables, ...variables];
         }
 
+
+        const getStopper = () => {
+            let canceled = false;
+            const controller = new AbortController();
+            const stopper = {
+                shouldStop: () => {
+                    canceled = stopConversationRef.current === true;
+                    return stopConversationRef.current === true;
+                },
+                signal: controller.signal,
+                isCanceled: ()=>{
+                    return canceled;
+                }
+            };
+
+            return stopper;
+        }
+
         const handleJsWorkflow = useCallback(async (message: Message, updatedVariables: string[], variablesByName:{[key:string]:any}, documents: AttachedDocument[] | null) => {
 
             if (!featureFlags.workflowRun) {
@@ -736,15 +760,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
 
                 message.data.inputTypes = inputTypes;
 
-                let canceled = false;
-                const controller = new AbortController();
-                const stopper = {
-                    shouldStop: () => {
-                        canceled = stopConversationRef.current === true;
-                        return stopConversationRef.current === true;
-                    },
-                    signal: controller.signal
-                }
+                const stopper = getStopper();
 
                 await telluser("Starting...");
 
@@ -806,11 +822,11 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                     let resultStr = (typeof result.result === "string") ? result.result :
                         formatter(result.result);
 
-                    let resultMsg = (canceled) ?
+                    let resultMsg = (stopper.isCanceled()) ?
                         "You stopped execution of this task." :
                         "Result\n---------------------\n" + resultStr;
 
-                    let codeMsg = (canceled) ? "" :
+                    let codeMsg = (stopper.isCanceled()) ? "" :
                         "\n\nCode\n---------------------\n" +
                         "```javascript \n" + result?.code + "```";
 
@@ -910,11 +926,104 @@ export const Chat = memo(({stopConversationRef}: Props) => {
             }
         };
 
-        const routeMessage = (message: Message, index: number | undefined, plugin: Plugin | null | undefined, documents: AttachedDocument[] | null) => {
+        const handleOpenAiAssistant = async (selectedAssistant:Assistant, message:Message, deleteCount:number) => {
+            if(selectedConversation) {
+                const stopper = getStopper();
+
+                const updatedMessages = [...selectedConversation.messages];
+                if (deleteCount) {
+                    for (let i = 0; i < deleteCount; i++) {
+                        updatedMessages.pop();
+                    }
+                }
+
+               updatedMessages.push(message);
+
+                let updatedConversation = {
+                    ...selectedConversation,
+                    messages: updatedMessages,
+                };
+
+                homeDispatch({
+                    field: 'selectedConversation',
+                    value: updatedConversation,
+                });
+
+                console.log("Assistant Chat: ", selectedConversation);
+
+                setCurrentMessage(message);
+
+                homeDispatch({field: 'loading', value: true});
+                homeDispatch({field: 'messageIsStreaming', value: true});
+
+                assistantChat(apiKey,
+                    stopper,
+                    selectedAssistant,
+                    selectedConversation.prompt,
+                    [...selectedConversation?.messages, message],
+                    () => {
+                    },
+                    selectedConversation?.model)
+                    .then((r) => {
+                        try {
+                            const {success, messages} = r;
+
+                            if(!success || !messages || messages.length === 0 && !success){
+                                alert("The assistant failed to respond. Please try again.");
+                                return;
+                            }
+
+                            const newMessages = messages.map((m:any[]) => {
+                                return {...m, id: uuidv4()}
+                            });
+
+                            console.log("Assistant Chat Response", newMessages);
+
+                            const newUpdatedConversation = {
+                                ...updatedConversation,
+                                messages: [...updatedMessages, ...newMessages]
+                            }
+                            console.log("Updated Conversation", newUpdatedConversation);
+
+                            homeDispatch({field: 'selectedConversation', value: newUpdatedConversation});
+                            saveConversation(selectedConversation);
+                        } catch (e) {
+                            console.log("Error updating conversation", e);
+                            alert("Unable to reach the assistant. Please try again.");
+                        }
+                    })
+                    .finally(() => {
+                        homeDispatch({field: 'loading', value: false});
+                        homeDispatch({field: 'messageIsStreaming', value: false});
+                    });
+            }
+        }
+
+        const routeMessage = (message: Message, deleteCount: number | undefined, plugin: Plugin | null | undefined, documents: AttachedDocument[] | null) => {
+
             if (message.type == MessageType.PROMPT
+                || message.type == MessageType.ROOT
                 || message.type == "chat" //Unfortunate hack to support old messages
             ) {
-                handleSend(message, index, plugin);
+
+                if(selectedAssistant && selectedAssistant?.id !== DEFAULT_ASSISTANT.id) {
+                    if (selectedConversation) {
+
+                        if(selectedAssistant.definition.provider === "openai") {
+                            try {
+                                handleOpenAiAssistant(selectedAssistant, message, deleteCount || 0);
+                            } catch (e) {
+                               alert("Error reaching OpenAI. Please retry your request.");
+                            }
+                        }
+                        else {
+                            handleSend(message, deleteCount, plugin, null, selectedAssistant.definition.instructions);
+                        }
+                    }
+                }
+                else{
+                    handleSend(message, deleteCount, plugin);
+                }
             } else if (message.type == MessageType.AUTOMATION) {
                 handleJsWorkflow(message, [], {}, documents);
             } else {
@@ -933,7 +1042,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                 let template = templateData?.content;
                 const variables = parseEditableVariables(template);
 
-                const doWorkflow = templateData.type == "automation";
+                const doWorkflow = templateData.type === "automation";
 
                 // console.log("Do Workflow", doWorkflow);
 
@@ -958,7 +1067,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                 // @ts-ignore
                 setCurrentMessage(message);
 
-                if (message.type == MessageType.PROMPT) {
+                if (message.type === MessageType.PROMPT || message.type === MessageType.ROOT) {
                     handleSend(message, 0, null);
                 } else {
                     console.log("Workflow", message);
@@ -1272,9 +1381,22 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                                         includeFolders={false}
                                         selectedConversations={selectedConversation ? [selectedConversation] : []}
                                     />
+                                    {isDownloadDialogVisible && (
+                                        <DownloadModal
+                                            includeConversations={true}
+                                            includePrompts={false}
+                                            includeFolders={false}
+                                            selectedConversations={selectedConversation ? [selectedConversation] : []}
+                                            onCancel={() => {
+                                                setIsDownloadDialogVisible(false);
+                                            }}
+                                            onDownloadReady={function (url: string): void {
+
+                                            }}/>
+                                    )}
                                     <div
                                         className="sticky top-0 z-10 flex justify-center border border-b-neutral-300 bg-neutral-100 py-2 text-sm text-neutral-500 dark:border-none dark:bg-[#444654] dark:text-neutral-200">
-                                        {t('Model')}: {selectedConversation?.model.name} | {t('Temp')}
+                                        {t('Workspace: ' + workspaceMetadata.name)} | {t('Model')}: {selectedConversation?.model.name} | {t('Temp')}
                                         : {selectedConversation?.temperature} |
                                         <button
                                             className="ml-2 cursor-pointer hover:opacity-50"
@@ -1293,6 +1415,17 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                                             onClick={() => setIsShareDialogVisible(true)}
                                         >
                                             <IconShare size={18}/>
+                                        </button>
+                                        <button
+                                            className="ml-2 cursor-pointer hover:opacity-50"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setIsDownloadDialogVisible(true)
+
+                                            }}
+                                        >
+                                            <IconDownload size={18}/>
                                         </button>
                                     </div>
                                     {showSettings && (

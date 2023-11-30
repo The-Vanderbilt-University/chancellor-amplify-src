@@ -9,6 +9,7 @@ import {
     IconTrash,
     IconX,
     IconDots,
+    IconRobot,
     IconShare,
 } from '@tabler/icons-react';
 import {
@@ -31,11 +32,17 @@ import {ShareModal} from './ShareModal';
 import {useChatService} from '@/hooks/useChatService';
 import {shareItems} from "@/services/shareService";
 import {v4 as uuidv4} from "uuid";
-import {fillInTemplate, parsePromptVariables, VariableFillOptions} from "@/utils/app/prompts";
+import {
+    fillInTemplate,
+    handleStartConversationWithPrompt,
+    parsePromptVariables,
+    VariableFillOptions
+} from "@/utils/app/prompts";
 import {AttachedDocument} from "@/types/attacheddocument";
 import saveState from "@/services/stateService";
 import {useUser} from '@auth0/nextjs-auth0/client';
 import { createExport } from "@/utils/app/importExport";
+import {MessageType} from "@/types/chat";
 
 interface Props {
     prompt: Prompt;
@@ -94,52 +101,71 @@ export const PromptComponent = ({prompt}: Props) => {
             })
     }
 
-    const dateTimeString = () => {
-        let date = new Date();
+    // const dateTimeString = () => {
+    //     let date = new Date();
+    //
+    //     let month = ('0' + (date.getMonth() + 1)).slice(-2); // getMonth() starts from 0, so add 1
+    //     let day = ('0' + date.getDate()).slice(-2);
+    //     let year = date.getFullYear().toString().substr(-2); // take the last 2 digit of the year
+    //
+    //     let hours = ('0' + date.getHours()).slice(-2);
+    //     let minutes = ('0' + date.getMinutes()).slice(-2);
+    //
+    //     let formattedDate = `${month}/${day}/${year} ${hours}:${minutes}`;
+    //     return formattedDate;
+    // }
 
-        let month = ('0' + (date.getMonth() + 1)).slice(-2); // getMonth() starts from 0, so add 1
-        let day = ('0' + date.getDate()).slice(-2);
-        let year = date.getFullYear().toString().substr(-2); // take the last 2 digit of the year
+    const handleStartConversation = (startPrompt: Prompt) => {
 
-        let hours = ('0' + date.getHours()).slice(-2);
-        let minutes = ('0' + date.getMinutes()).slice(-2);
+        handleStartConversationWithPrompt(handleNewConversation, prompts, startPrompt);
 
-        let formattedDate = `${month}/${day}/${year} ${hours}:${minutes}`;
-        return formattedDate;
-    }
-
-    const handleStartConversation = (prompt: Prompt) => {
-
-        let rootPromptObj = (prompt.data?.rootPromptId) ?
-            prompts.find((p) => p.id == prompt.data?.rootPromptId) : null;
-
-        let rootPrompt = null;
-        if (rootPromptObj != null && rootPromptObj?.content) {
-            let variables = parsePromptVariables(rootPromptObj?.content);
-            let variableValues = variables.map((v) => "");
-            rootPrompt = fillInTemplate(rootPromptObj?.content, variables, variableValues, [], true);
-        }
-
-        const getPromptTags = (prompt: Prompt | null | undefined) => {
-            return (prompt && prompt.data && prompt.data.conversationTags) ? prompt.data.conversationTags : [];
-        }
-
-        let tags: string[] = [...getPromptTags(rootPromptObj), ...getPromptTags(prompt)]
-        if (prompt.type == "automation") {
-            tags.push("automation");
-        }
-
-
-        handleNewConversation(
-            {
-                name: prompt.name + " " + dateTimeString(),
-                messages: [],
-                promptTemplate: prompt,
-                processors: [],
-                tools: [],
-                tags: tags,
-                ...(rootPrompt != null && {prompt: rootPrompt}),
-            })
+        // let prompt = startPrompt;
+        //
+        // let rootPromptObj = (prompt.data?.rootPromptId) ?
+        //     prompts.find((p) => p.id == prompt.data?.rootPromptId) : null;
+        //
+        // if(rootPromptObj == null && prompt.type === MessageType.ROOT){
+        //     rootPromptObj = prompt;
+        //     prompt = {
+        //         description: rootPromptObj.description,
+        //         folderId: null,
+        //         id: uuidv4(),
+        //         name: "Conversation Started with "+rootPromptObj.name,
+        //         type: MessageType.PROMPT,
+        //         content: "Tell me about what you can help me with.",
+        //         data: {
+        //             rootPromptId: rootPromptObj.id
+        //         }
+        //     }
+        // }
+        //
+        // let rootPrompt = null;
+        // if (rootPromptObj != null && rootPromptObj?.content) {
+        //     let variables = parsePromptVariables(rootPromptObj?.content);
+        //     let variableValues = variables.map((v) => "");
+        //     rootPrompt = fillInTemplate(rootPromptObj?.content, variables, variableValues, [], true);
+        // }
+        //
+        // const getPromptTags = (prompt: Prompt | null | undefined) => {
+        //     return (prompt && prompt.data && prompt.data.conversationTags) ? prompt.data.conversationTags : [];
+        // }
+        //
+        // let tags: string[] = [...getPromptTags(rootPromptObj), ...getPromptTags(prompt)]
+        // if (prompt.type == "automation") {
+        //     tags.push("automation");
+        // }
+        //
+        //
+        // handleNewConversation(
+        //     {
+        //         name: prompt.name + " " + dateTimeString(),
+        //         messages: [],
+        //         promptTemplate: prompt,
+        //         processors: [],
+        //         tools: [],
+        //         tags: tags,
+        //         ...(rootPrompt != null && {prompt: rootPrompt}),
+        //     })
     }
 
     const handleUpdate = (prompt: Prompt) => {
@@ -177,6 +203,18 @@ export const PromptComponent = ({prompt}: Props) => {
     const handleCopy = () => {
         const newPrompt = {...prompt, id: uuidv4(), name: prompt.name + ' (copy)'};
         handleAddPrompt(newPrompt);
+    }
+
+    const getIcon = (prompt: Prompt) => {
+        if(prompt.data && prompt.data.assistant){
+            return (<IconRobot size={18}/>);
+        }
+        else if(prompt.type === "automation"){
+            return (<IconApiApp size={18}/>);
+        }
+        else {
+            return (<IconMessage2 size={18}/>);
+        }
     }
 
 
@@ -217,7 +255,7 @@ export const PromptComponent = ({prompt}: Props) => {
 
                     <div className="relative flex items-center overflow-hidden text-left text-[12.5px] leading-3">
                         <div className="pr-2">
-                            {(prompt.type === "automation") ? <IconApiApp/> : <IconMessage2/>}
+                            {getIcon(prompt)}
                         </div>
                         <div
                             className="overflow-hidden flex-1 text-ellipsis whitespace-nowrap break-all text-left text-[12.5px] leading-3">

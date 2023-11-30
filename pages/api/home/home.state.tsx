@@ -8,6 +8,7 @@ import { WorkflowDefinition } from "@/types/workflow";
 import { Status } from "@/types/workflow";
 import {Workspace} from "@/types/workspace";
 import { v4 as uuidv4 } from 'uuid';
+import {Assistant, DEFAULT_ASSISTANT} from "@/types/assistant";
 
 export interface HomeInitialState {
   apiKey: string;
@@ -27,6 +28,7 @@ export interface HomeInitialState {
   temperature: number;
   showChatbar: boolean;
   showPromptbar: boolean;
+  workspaceDirty: boolean;
   currentFolder: FolderInterface | undefined;
   messageError: boolean;
   searchTerm: string;
@@ -35,6 +37,8 @@ export interface HomeInitialState {
   serverSidePluginKeysSet: boolean,
   featureFlags: {[key:string]:boolean},
   workspaceMetadata: Workspace;
+  selectedAssistant: Assistant | null;
+  page: string;
 }
 
 export const initialState: HomeInitialState = {
@@ -43,6 +47,7 @@ export const initialState: HomeInitialState = {
   pluginKeys: [],
   lightMode: 'dark',
   status: [],
+  workspaceDirty: false,
   messageIsStreaming: false,
   modelError: null,
   models: [],
@@ -74,6 +79,8 @@ export const initialState: HomeInitialState = {
   defaultModelId: undefined,
   serverSideApiKeyIsSet: false,
   serverSidePluginKeysSet: false,
+  selectedAssistant: null,
+  page: 'market',
   featureFlags: {
     uploadDocuments:true,
     extractDocumentsLocally:true,
@@ -82,5 +89,6 @@ export const initialState: HomeInitialState = {
     rootPromptCreate:true,
     pluginsOnInput:false,
     followUpCreate:true,
+    marketItemDelete:true,
   },
 };
