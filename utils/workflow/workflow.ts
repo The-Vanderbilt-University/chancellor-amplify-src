@@ -423,7 +423,9 @@ async function executeWorkflow(tools: { [p: string]: AiTool }, code: string) {
 
     } catch (e) {
         console.log(e);
-        tools.tellUser.exec("I am going to fix some errors in the workflow...");
+        success = false;
+        result = "" + e;
+        //tools.tellUser.exec("I am going to fix some errors in the workflow...");
     }
     return {success, result, javascriptFn};
 }
@@ -433,6 +435,7 @@ function createWorkflowParams(context: WorkflowContext, apiKey: string, stopper:
         context: context,
         requestedParameters: {},
         requestedDocuments: [],
+        debugOutput: [],
         apiKey: apiKey,
         stopper: stopper,
         statusLogger: statusLogger,
@@ -532,6 +535,33 @@ const promptLLMFull = async (apiKey:string, stopper:Stopper, persona: string, pr
     }
 
     return charsReceived;
+}
+
+export function stripComments(code: string) {
+    let codeStrippedOfComments = code.replace(/\/\/.*/g, "");
+    codeStrippedOfComments = codeStrippedOfComments.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, "");
+    // String \/\/ to the end of lines
+    return codeStrippedOfComments.replace(/\/\/.*/g, "");
+}
+
+export const findParametersInWorkflowCode = (code: string) => {
+    // see if getDocument appears in code
+    let codeStrippedOfComments = stripComments(code);
+
+    let paramNamesStr = "";
+    try {
+        // Find all instances of getParameter("NAME", ....) and extract the NAMEs as a list
+        //getParameter('prompt1','text')
+        const paramNames = codeStrippedOfComments.match(/getParameter\(\s*[\"\']([^\"\']*)[\"\']/g);
+
+        // Transform all the paramNames into the format {{NAME}} and join them with a space
+        paramNamesStr = (paramNames) ?
+            paramNames.map((name) => "{{" + name.substring(14, name.length - 1).trim() + "}}").join(" ") : "";
+    } catch (e) {
+
+    }
+
+    return paramNamesStr;
 }
 
 export const replayJSWorkflow = async (apiKey: string, code:string, customTools: { [p: string]: AiTool }, stopper: Stopper, statusLogger:(status:Status)=>void, context:WorkflowContext, incrementalPromptResultCallback: (responseText: string) => void) => {

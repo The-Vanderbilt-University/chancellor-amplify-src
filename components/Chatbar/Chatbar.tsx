@@ -25,6 +25,7 @@ import ChatbarContext from './Chatbar.context';
 import { ChatbarInitialState, initialState } from './Chatbar.state';
 
 import { v4 as uuidv4 } from 'uuid';
+import {FolderInterface} from "@/types/folder";
 
 export const Chatbar = () => {
   const { t } = useTranslation('sidebar');
@@ -46,12 +47,17 @@ export const Chatbar = () => {
     dispatch: chatDispatch,
   } = chatBarContextValue;
 
+
   const handleApiKeyChange = useCallback(
     (apiKey: string) => {
 
     },
     [homeDispatch],
   );
+
+  const handleShareFolder = (folder: FolderInterface) => {
+
+  }
 
   const handlePluginKeyChange = (pluginKey: PluginKey) => {
 
@@ -124,17 +130,21 @@ export const Chatbar = () => {
 
   useEffect(() => {
     if (searchTerm) {
-      chatDispatch({
-        field: 'filteredConversations',
-        value: conversations.filter((conversation) => {
-          const searchable =
+
+      const results = conversations.filter((conversation) => {
+        const searchable =
             conversation.name.toLocaleLowerCase() +
             ' ' +
             conversation.messages.map((message) => message.content).join(' ');
-          return searchable.toLowerCase().includes(searchTerm.toLowerCase());
-        }),
+        return searchable.toLowerCase().includes(searchTerm.toLowerCase());
       });
+
+      chatDispatch({
+        field: 'filteredConversations',
+        value: results,}
+      );
     } else {
+
       chatDispatch({
         field: 'filteredConversations',
         value: conversations,
@@ -153,14 +163,15 @@ export const Chatbar = () => {
         handlePluginKeyChange,
         handleClearPluginKey,
         handleApiKeyChange,
+        handleShareFolder,
       }}
     >
       <Sidebar<Conversation>
         side={'left'}
         isOpen={showChatbar}
-        addItemButtonTitle={t('New chat')}
+        addItemButtonTitle={t('New Chat')}
         itemComponent={<Conversations conversations={filteredConversations} />}
-        folderComponent={<ChatFolders searchTerm={searchTerm} />}
+        folderComponent={<ChatFolders searchTerm={searchTerm} conversations={filteredConversations}/>}
         items={filteredConversations}
         searchTerm={searchTerm}
         handleSearchTerm={(searchTerm: string) =>

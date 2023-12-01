@@ -37,7 +37,7 @@ import {Chat} from '@/components/Chat/Chat';
 import {Chatbar} from '@/components/Chatbar/Chatbar';
 import {Navbar} from '@/components/Mobile/Navbar';
 import Promptbar from '@/components/Promptbar';
-import {Icon3dCubeSphere, IconApiApp, IconMessage, IconSettings, IconBook2} from "@tabler/icons-react";
+import {Icon3dCubeSphere, IconTournament, IconShare, IconApiApp, IconMessage, IconSettings, IconBook2} from "@tabler/icons-react";
 import {IconUser, IconLogout} from "@tabler/icons-react";
 import HomeContext, {ClickContext, Processor} from './home.context';
 import {HomeInitialState, initialState} from './home.state';
@@ -46,11 +46,15 @@ import {v4 as uuidv4} from 'uuid';
 import {useUser} from '@auth0/nextjs-auth0/client';
 
 import styled from "styled-components";
-import {Button} from "react-query/types/devtools/styledComponents";
-import WorkflowDefinitionBar from "@/components/Workflow/WorkflowDefinitionBar";
-import {WorkflowDefinition, WorkflowRun} from "@/types/workflow";
+import {WorkflowDefinition} from "@/types/workflow";
 import {saveWorkflowDefinitions} from "@/utils/app/workflows";
 import {findWorkflowPattern} from "@/utils/workflow/aiflow";
+import SharedItemsList from "@/components/Share/SharedItemList";
+import {Features} from "@/types/features";
+import {saveFeatures} from "@/utils/app/features";
+import {findParametersInWorkflowCode} from "@/utils/workflow/workflow";
+import WorkspaceList from "@/components/Workspace/WorkspaceList";
+import {Market} from "@/components/Market/Market";
 
 const LoadingIcon = styled(Icon3dCubeSphere)`
   color: lightgray;
@@ -81,6 +85,8 @@ const Home = ({
     });
 
 
+
+
     const {
         state: {
             apiKey,
@@ -91,6 +97,7 @@ const Home = ({
             selectedConversation,
             prompts,
             temperature,
+            page,
         },
         dispatch,
     } = contextValue;
@@ -124,12 +131,26 @@ const Home = ({
     // FETCH MODELS ----------------------------------------------
 
     const handleSelectConversation = (conversation: Conversation) => {
+        dispatch({field: 'page', value: 'chat'})
+
         dispatch({
             field: 'selectedConversation',
             value: conversation,
         });
 
         saveConversation(conversation);
+    };
+
+    // Feature OPERATIONS  --------------------------------------------
+
+    const handleToggleFeature = (name: string) => {
+        const features = {...contextValue.state.featureFlags};
+        features[name] = !features[name];
+
+        dispatch({field: 'featureFlags', value: features});
+        saveFeatures(features);
+
+        return features;
     };
 
     // FOLDER OPERATIONS  --------------------------------------------
@@ -219,6 +240,8 @@ const Home = ({
     // CONVERSATION OPERATIONS  --------------------------------------------
 
     const handleNewConversation = (params = {}) => {
+        dispatch({field: 'page', value: 'chat'})
+
         const lastConversation = conversations[conversations.length - 1];
 
         // Create a string for the current date like Oct-18-2021
@@ -381,7 +404,9 @@ const Home = ({
                             }
 
                             const documentStrings = workflowDefinition.inputs.documents.map((doc) => `{{${doc.name}:file}}`).join('\n');
-                            const parameterStrings = Object.keys(workflowDefinition.inputs.parameters).map((key) => `{{${key}}}`).join('\n');
+                            let parameterStrings = Object.keys(workflowDefinition.inputs.parameters).map((key) => `{{${key}}}`).join('\n');
+                            parameterStrings += findParametersInWorkflowCode(code);
+
                             const formattedString =
                                 `${documentStrings}${parameterStrings}${prompt}`;
 
@@ -455,6 +480,28 @@ const Home = ({
         dispatch({field: 'conversations', value: all});
     };
 
+    const clearWorkspace = async () => {
+        await dispatch({field: 'conversations', value: []});
+        await dispatch({field: 'prompts', value: []});
+        await dispatch({field: 'folders', value: []});
+
+        saveConversation({
+            id: uuidv4(),
+            name: t('New Conversation'),
+            messages: [],
+            model: OpenAIModels[defaultModelId],
+            prompt: DEFAULT_SYSTEM_PROMPT,
+            temperature: DEFAULT_TEMPERATURE,
+            folderId: null,
+            promptTemplate: null
+        });
+        saveConversations([]);
+        saveFolders([]);
+        savePrompts([]);
+
+        await dispatch({field: 'selectedConversation', value: null});
+    }
+
     const handleAddMessages = async (selectedConversation: Conversation | undefined, messages: any) => {
 
         if (selectedConversation) {
@@ -496,6 +543,7 @@ const Home = ({
     useEffect(() => {
         if (window.innerWidth < 640) {
             dispatch({field: 'showChatbar', value: false});
+            dispatch({field: 'showPromptbar', value: false});
         }
     }, [selectedConversation]);
 
@@ -526,6 +574,11 @@ const Home = ({
         }
 
         const apiKey = localStorage.getItem('apiKey');
+
+        const workspaceMetadataStr = localStorage.getItem('workspaceMetadata');
+        if(workspaceMetadataStr){
+            dispatch({field: 'workspaceMetadata', value: JSON.parse(workspaceMetadataStr)});
+        }
 
         if (serverSideApiKeyIsSet) {
             dispatch({field: 'apiKey', value: ''});
@@ -657,6 +710,7 @@ const Home = ({
                     removePreProcessingCallback,
                     addPostProcessingCallback,
                     removePostProcessingCallback,
+                    clearWorkspace,
                     handleAddMessages,
                 }}
             >
@@ -685,8 +739,8 @@ const Home = ({
                             <TabSidebar
                                 side={"left"}
                                 footerComponent={
-                                    <div className="m-0 p-0 border-t border-white/20 pt-1 text-sm">
-                                        <button className="text-white" onClick={() => {
+                                    <div className="m-0 p-0 border-t dark:border-white/20 pt-1 text-sm">
+                                        <button className="dark:text-white" onClick={() => {
                                             window.location.href = '/api/auth/logout'
                                         }}>
 
@@ -700,11 +754,20 @@ const Home = ({
                                 }
                             >
                                 <Tab icon={<IconMessage/>}><Chatbar/></Tab>
+                                <Tab icon={<IconShare/>}><SharedItemsList/></Tab>
+                                <Tab icon={<IconTournament/>}><WorkspaceList/></Tab>
                                 <Tab icon={<IconSettings/>}><SettingsBar/></Tab>
                             </TabSidebar>
 
                             <div className="flex flex-1">
-                                <Chat stopConversationRef={stopConversationRef}/>
+                                {page === 'chat' && (
+                                    <Chat stopConversationRef={stopConversationRef}/>
+                                )}
+                                {page === 'market' && (
+                                    <Market items={[
+                                        // {id: "1", name: "Item 1"},
+                                    ]}/>
+                                )}
                             </div>
 
 
