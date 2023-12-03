@@ -190,14 +190,27 @@ export const Market = ({items}: Props) => {
     };
 
     useEffect(() => {
+        scrollToTop();
 
         const fetchCategory = (searchCategory && searchCategory !== "*") ? searchCategory : "/";
 
         setIsLoading(true);
 
+        updateNavItems(fetchCategory);
+
         getCategory(fetchCategory).then((data) => {
 
+            console.log("Fetched Category: ", data.data);
+
             completeSubCategories(data.data).then((subCategories) => {
+
+                console.log("Fetched Sub Categories: ", subCategories);
+
+                if(!subCategories || subCategories.length === 0) {
+                    subCategories = [
+                        data.data
+                    ]
+                }
 
                 setMarketCategories(subCategories);
                 setIsLoading(false);
@@ -213,12 +226,14 @@ export const Market = ({items}: Props) => {
         const results = search(searchStr, grouped);
         setGroupedItems(results);
 
-        scrollToTop();
+        // setTimeout(() => {
+        //     scrollToTop();
+        // }, 500);
     }, [marketItems, searchStr, searchCategory]);
 
-    useEffect(() => {
-        scrollToTop();
-    }, [showExample]);
+    // useEffect(() => {
+    //     scrollToTop();
+    // }, [showExample]);
 
     const search = (query: string, grouped: { [key: string]: MarketItem[]; }) => {
         if (query) {
@@ -508,8 +523,15 @@ If people need help with prompt engineering, which is how you converse effective
         }
     }
 
+    function formatCategoryName(input: string): string {
+        return input
+            .split("_")
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+    }
+
     const getNav = () => {
-        return (<nav ref={scrollRef} className="pl-20 flex px-5 py-3 text-gray-700 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700" aria-label="Breadcrumb">
+        return (<nav ref={scrollRef} className="sticky top-0 z-50 pl-20 flex px-5 py-3 text-gray-700 border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700" aria-label="Breadcrumb">
             <ol className="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
                 <li className="inline-flex items-center">
                     <a onClick={
@@ -541,7 +563,9 @@ If people need help with prompt engineering, which is how you converse effective
                                        crumb.nav();
                                    }
                                }
-                               className="ms-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ms-2 dark:text-gray-400 dark:hover:text-white">{crumb.name}</a>
+                               className="ms-1 text-sm font-medium text-gray-700 hover:text-blue-600 md:ms-2 dark:text-gray-400 dark:hover:text-white">
+                                {formatCategoryName(crumb.name)}
+                            </a>
                         </div>
                     </li>
                 ))}
@@ -551,7 +575,7 @@ If people need help with prompt engineering, which is how you converse effective
 
 
 // @ts-ignore
-    return showExample ? (
+    return (
             <div className="relative flex-1 overflow-hidden bg-white dark:bg-[#343541]">
                 <>
                     <div
@@ -608,6 +632,8 @@ If people need help with prompt engineering, which is how you converse effective
                                 note={marketItemDescription}/>
                         )}
 
+                        {showExample  && (
+                        <>
                         <section className="bg-gray-50 dark:bg-gray-900">
                             <div
                                 className="ml-8 py-8 px-4 mx-auto max-w-screen-xl lg:py-16 grid lg:grid-cols-2 gap-8 lg:gap-8">
@@ -782,80 +808,10 @@ If people need help with prompt engineering, which is how you converse effective
                             <ExampleChat key={index} messages={example.conversation.messages.slice(1)}/>
                             </>
                         ))}
-                    </div>
-                </>
-            </div>
-        ) :
-        (
-            <div className="relative flex-1 overflow-hidden bg-white dark:bg-[#343541]">
-                <>
-                    <div
-                        className="max-h-full overflow-x-hidden"
-                    >
-                        <div>
+                        </>)}
 
-                            {showMarketItemTryModal && (
-                                <ImportAnythingModal
-                                    title={"Try Market Item"}
-                                    importButtonLabel={"Try"}
-                                    onImport={
-                                        () => {
-                                            setShowMarketItemTryModal(false);
-                                        }
-                                    }
-                                    onCancel={
-                                        () => {
-                                            setShowMarketItemTryModal(false);
-                                        }
-                                    }
-                                    customImportFn={async (conversations, folders, prompts) => {
-                                        doTryItem(conversations, folders, prompts);
-                                        setShowMarketItemTryModal(false);
-                                    }}
-                                    includeConversations={false}
-                                    includePrompts={false}
-                                    includeFolders={false}
-                                    importKey={""}
-                                    importFetcher={importFetcher}
-                                    note={marketItemDescription}/>
-                            )}
-
-                            {showMarketItemInstallModal && (
-                                <ImportAnythingModal
-                                    title={"Install Market Item"}
-                                    importButtonLabel={"Install"}
-                                    onImport={
-                                        () => {
-
-                                            alert("Market item installed.");
-                                            setShowMarketItemInstallModal(false);
-                                        }
-                                    }
-                                    onCancel={
-                                        () => {
-                                            setShowMarketItemInstallModal(false);
-                                        }
-                                    }
-                                    includeConversations={true}
-                                    includePrompts={true}
-                                    includeFolders={true}
-                                    importKey={""}
-                                    importFetcher={importFetcher}
-                                    note={marketItemDescription}/>
-                            )}
-
-                            {/*{showSettings && (*/}
-                            {/*    <div*/}
-                            {/*        className="flex flex-col space-y-10 md:mx-auto md:max-w-xl md:gap-6 md:py-3 md:pt-6 lg:max-w-2xl lg:px-0 xl:max-w-3xl">*/}
-                            {/*        <div*/}
-                            {/*            className="flex h-full flex-col space-y-4 border-b border-neutral-200 p-4 dark:border-neutral-600 md:rounded-lg md:border">*/}
-                            {/*            <ModelSelect/>*/}
-                            {/*        </div>*/}
-                            {/*    </div>*/}
-                            {/*)}*/}
-
-                            {getNav()}
-
+                        {!showExample && (
+                            <>
                             <section className="bg-gray-50 dark:bg-gray-900">
                                 <div
                                     className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 grid lg:grid-cols-2 gap-8 lg:gap-16">
@@ -897,72 +853,63 @@ If people need help with prompt engineering, which is how you converse effective
                                         <div
                                             className="w-full lg:max-w-xl p-6 space-y-8 sm:p-8 bg-white rounded-lg shadow-xl dark:bg-gray-800">
                                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                                Search the Market
+                                                AI-Generated Prompts & Tools for Vanderbilt
                                             </h2>
+                                            <div>
+                                                <h4>We asked GPT-4 to think of prompts that would be helpful to Vanderbilt
+                                                    faculty and staff.</h4>
+                                            </div>
+                                            <div>
+                                                We then taught GPT-4 how to write reusable prompt
+                                                templates for Amplify. Most of what you see in the market is GPT-4&apos;s
+                                                prompts to help you. We hope you find them useful.
+                                            </div>
+                                            {/*<h2 className="text-2xl font-bold text-gray-900 dark:text-white">*/}
+                                            {/*    Search this Category*/}
+                                            {/*</h2>*/}
                                             <form className="mt-8 space-y-6" action="#">
-                                                <div>
-                                                    <label htmlFor="keywords"
-                                                           className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Key
-                                                        Words</label>
-                                                    <input type="text" name="keywords" id="keywords"
-                                                           value={searchStr}
-                                                           onChange={(e) => setSearchStr(e.target.value)}
-                                                           className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                                           placeholder="Enter your search terms..." required/>
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="category"
-                                                           className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Category</label>
-                                                    <select id="category" className="text-black text-xl rounded"
-                                                            onChange={(e) => setSearchCategory(e.target.value)}
-                                                            value={searchCategory}
-                                                    >
-                                                        <option key="all" value="*">All Categories</option>
-                                                        {marketCategories.map((category) => (
-                                                            <option key={category.id}
-                                                                    value={category.id}>{category.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                {/*<div>*/}
+                                                {/*    <label htmlFor="keywords"*/}
+                                                {/*           className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Key*/}
+                                                {/*        Words</label>*/}
+                                                {/*    <input type="text" name="keywords" id="keywords"*/}
+                                                {/*           value={searchStr}*/}
+                                                {/*           onChange={(e) => setSearchStr(e.target.value)}*/}
+                                                {/*           className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"*/}
+                                                {/*           placeholder="Enter your search terms..." required/>*/}
+                                                {/*</div>*/}
+                                                {/*<div>*/}
+                                                {/*    <label htmlFor="category"*/}
+                                                {/*           className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Category</label>*/}
+                                                {/*    <select id="category" className="text-black text-xl rounded"*/}
+                                                {/*            onChange={(e) => setSearchCategory(e.target.value)}*/}
+                                                {/*            value={searchCategory}*/}
+                                                {/*    >*/}
+                                                {/*        <option key="all" value="*">All Categories</option>*/}
+                                                {/*        {marketCategories.map((category) => (*/}
+                                                {/*            <option key={category.id}*/}
+                                                {/*                    value={category.id}>{category.name}</option>*/}
+                                                {/*        ))}*/}
+                                                {/*    </select>*/}
+                                                {/*</div>*/}
 
-                                                <button type="submit"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setSearchStr("");
-                                                            setSearchCategory("*");
-                                                        }}
+                                                <div>
+                                                <a href="mailto:jules.white@vanderbilt.edu?subject=AI-Generated%40Prompts"
                                                         className="w-full px-5 py-3 text-base font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 sm:w-auto dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                                                    Reset
-                                                </button>
-
+                                                    Send Feedback
+                                                </a>
+                                                </div>
+                                                <div>
+                                                <a href="mailto:jules.white@vanderbilt.edu?subject=AI-Generated%40Prompts"
+                                                   className="w-full px-5 py-3 text-base font-medium text-center text-white bg-purple-700 rounded-lg hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 sm:w-auto dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-800">
+                                                    Request a New Category
+                                                </a>
+                                                </div>
                                             </form>
                                         </div>
                                     </div>
                                 </div>
                             </section>
-
-
-                            {/*{Object.entries(groupedItems)*/}
-                            {/*    .filter(([category, items]) => {*/}
-                            {/*        return searchCategory === "*" || searchCategory === category;*/}
-                            {/*    }).length === 0 && (*/}
-                            {/*    <section*/}
-                            {/*        className={`bg-center bg-cover bg-no-repeat bg-[image:var(--image-url)] bg-gray-700 bg-blend-multiply`}>*/}
-                            {/*        <div className="px-4 mx-auto max-w-screen-xl text-center py-18 lg:py-20">*/}
-                            {/*            <h1 className="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl">*/}
-                            {/*                <div className="flex flex-row items-center justify-center">*/}
-                            {/*                    <div className="flex">*/}
-                            {/*                        <IconRocketOff size={89}/>*/}
-                            {/*                    </div>*/}
-                            {/*                    <div className="ml-3 flex">*/}
-                            {/*                        No Matches*/}
-                            {/*                    </div>*/}
-                            {/*                </div>*/}
-                            {/*            </h1>*/}
-                            {/*        </div>*/}
-                            {/*    </section>*/}
-                            {/*    )*/}
-                            {/*}*/}
 
                             {isLoading && (
                                 <div className="flex flex-col w-full items-center justify-center mt-6">
@@ -986,9 +933,44 @@ If people need help with prompt engineering, which is how you converse effective
                                             <p className="mb-8 text-lg font-normal text-gray-300 lg:text-xl sm:px-16 lg:px-48">
                                                 {category.description}
                                             </p>
+                                            <div className="flex flex-col w-full">
+                                                {(category.categories
+                                                    && category.categories?.length > 0) && (
+                                                    <h2 className="w-full mt-10 mb-4 text-2xl font-extrabold tracking-tight leading-none text-white md:text-3xl lg:text-4xl">
+                                                        Sub Categories
+                                                    </h2>
+                                                )}
+                                                <div className="grid grid-cols-3 gap-1 content-center">
+                                                    {category.categories?.map((item, index) => (
+                                                        <div key={item.id}
+                                                             onClick={(e) => {
+                                                                 e.preventDefault();
+                                                                 setSearchCategory(item.id);
+                                                             }
+                                                             }
+                                                             className="m-3 max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+                                                            <div className="">
+
+                                                            </div>
+
+                                                            <div className="p-5">
+                                                                <a href="#">
+                                                                    <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                                                                        {item.name}
+                                                                    </h5>
+                                                                </a>
+                                                                <p className="mb-3 font-normal text-gray-700 dark:text-gray-400">
+                                                                    {item.description}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                    ))}
+                                                </div>
+                                            </div>
                                             {category.items && category.items?.length > 0 && (
                                                 <h2 className="w-full mt-10 mb-4 text-2xl font-extrabold tracking-tight leading-none text-white md:text-3xl lg:text-4xl">
-                                                    Featured
+                                                    Featured Prompt Templates
                                                 </h2>
                                             )}
                                             {(category.items
@@ -1099,65 +1081,10 @@ If people need help with prompt engineering, which is how you converse effective
 
                                                     ))}
                                                 </div>
-                                                <div className="flex flex-col w-full">
-                                                    {(category.categories
-                                                        && category.categories?.length > 0) && (
-                                                        <h2 className="w-full mt-10 mb-4 text-2xl font-extrabold tracking-tight leading-none text-white md:text-3xl lg:text-4xl">
-                                                            Sub Categories
-                                                        </h2>
-                                                    )}
-                                                    <div className="grid grid-cols-3 gap-1 content-center">
-                                                        {category.categories?.map((item, index) => (
-                                                            <div key={item.id}
-                                                                 onClick={(e) => {
-                                                                     e.preventDefault();
-                                                                     setSearchCategory(item.id);
-                                                                 }
-                                                                 }
-                                                                 className="m-3 max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-                                                                <div className="">
 
-                                                                </div>
-
-                                                                <div className="p-5">
-                                                                    <a href="#">
-                                                                        <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-                                                                            {item.name}
-                                                                        </h5>
-                                                                    </a>
-                                                                    <p className="mb-3 font-normal text-gray-700 dark:text-gray-400">
-                                                                        {item.description}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-
-                                                        ))}
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex flex-row items-center justify-center p-4 mt-3">
-                                            {searchCategory !== "*" && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        setSearchCategory("*");
-                                                    }}
-                                                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-7 py-2.5 me-2 mb-6 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                                                    See All Categories
-                                                </button>
-                                            )}
-                                            {/*{searchCategory === "*" && (*/}
-                                            {/*    <button*/}
-                                            {/*        onClick={(e) => {*/}
-                                            {/*            e.preventDefault();*/}
-                                            {/*            setSearchCategory(category.id);*/}
-                                            {/*        }}*/}
-                                            {/*        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-7 py-2.5 me-2 mb-6 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">*/}
-                                            {/*        See All in {category.name}*/}
-                                            {/*    </button>*/}
-                                            {/*)}*/}
-                                        </div>
+
                                     </section>
                                 ))
                             )}
@@ -1253,30 +1180,9 @@ If people need help with prompt engineering, which is how you converse effective
                                             )}
                                         </div>
                                     </section>
-
                                 ))}
-
+                            </>)}
                         </div>
-                    </div>
-
-                    {/*<ChatInput*/}
-                    {/*    handleUpdateModel={handleUpdateModel}*/}
-                    {/*    stopConversationRef={stopConversationRef}*/}
-                    {/*    textareaRef={textareaRef}*/}
-                    {/*    onSend={(message, plugin, documents: AttachedDocument[] | null) => {*/}
-                    {/*        setCurrentMessage(message);*/}
-                    {/*        //handleSend(message, 0, plugin);*/}
-                    {/*        routeMessage(message, 0, plugin, documents);*/}
-                    {/*    }}*/}
-                    {/*    onScrollDownClick={handleScrollDown}*/}
-                    {/*    onRegenerate={() => {*/}
-                    {/*        if (currentMessage) {*/}
-                    {/*            //handleSend(currentMessage, 2, null);*/}
-                    {/*            routeMessage(currentMessage, 2, null, null);*/}
-                    {/*        }*/}
-                    {/*    }}*/}
-                    {/*    showScrollDownButton={showScrollDownButton}*/}
-                    {/*/>*/}
                 </>
 
             </div>);
