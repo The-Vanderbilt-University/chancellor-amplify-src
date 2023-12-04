@@ -70,6 +70,7 @@ export const ChatMessage: FC<Props> = memo(({
         handleAddMessages: handleAddMessages
     } = useContext(HomeContext);
 
+    const { sendChatRequest } = useChatService();
 
     const markdownComponentRef = useRef<HTMLDivElement>(null);
 

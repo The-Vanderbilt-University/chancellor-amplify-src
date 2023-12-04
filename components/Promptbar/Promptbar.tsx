@@ -23,7 +23,6 @@ import {MessageType} from "@/types/chat";
 import {PromptModal} from "@/components/Promptbar/components/PromptModal";
 import {ShareAnythingModal} from "@/components/Share/ShareAnythingModal";
 import {FolderInterface} from "@/types/folder";
-import useStatsService from "@/services/eventService";
 
 const Promptbar = () => {
   const { t } = useTranslation('promptbar');
@@ -35,8 +34,6 @@ const Promptbar = () => {
   const [isShareDialogVisible, setIsShareDialogVisible] = useState(false);
   const [sharedPrompts, setSharedPrompts] = useState<Prompt[]>([])
   const [sharedFolders, setSharedFolders] = useState<FolderInterface[]>([])
-
-  const statsService = useStatsService();
 
   const {
     state: { prompts, defaultModelId, showPromptbar },
@@ -90,10 +87,7 @@ const Promptbar = () => {
 
   const handleCreatePrompt = () => {
     if (defaultModelId) {
-
       const newPrompt = createPrompt();
-
-      statsService.createPromptEvent(newPrompt);
 
       const updatedPrompts = [...prompts, newPrompt];
 
@@ -107,8 +101,6 @@ const Promptbar = () => {
   };
 
   const handleDeletePrompt = (prompt: Prompt) => {
-    statsService.deletePromptEvent(prompt);
-
     const updatedPrompts = prompts.filter((p) => p.id !== prompt.id);
 
     homeDispatch({ field: 'prompts', value: updatedPrompts });
@@ -116,15 +108,11 @@ const Promptbar = () => {
   };
 
   const handleCancelNewPrompt = () => {
-    statsService.editPromptCanceledEvent(prompt);
-
     handleDeletePrompt(prompt);
     setShowModal(false);
   }
 
   const handleUpdatePrompt = (prompt: Prompt) => {
-
-    statsService.editPromptCompletedEvent(prompt);
 
     const updatedPrompts = prompts.map((p) => {
       if (p.id === prompt.id) {

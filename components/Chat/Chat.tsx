@@ -59,7 +59,6 @@ import {ShareAnythingModal} from "@/components/Share/ShareAnythingModal";
 import {Assistant, DEFAULT_ASSISTANT} from "@/types/assistant";
 import { sendChat as assistantChat } from "@/services/assistantService";
 import {DownloadModal} from "@/components/Download/DownloadModal";
-import useStatsService from "@/services/eventService";
 
 interface Props {
     stopConversationRef: MutableRefObject<boolean>;
@@ -67,11 +66,6 @@ interface Props {
 
 export const Chat = memo(({stopConversationRef}: Props) => {
         const {t} = useTranslation('chat');
-
-        const statsService = useStatsService();
-        const { runPromptEvent,
-            sendChatRewriteEvent,
-            customLinkClickEvent } = statsService;
 
         const {
             state: {
@@ -261,7 +255,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                     temperature: selectedConversation.temperature,
                 };
 
-                sendChatRewriteEvent(chatBody, updateIndex);
+                console.log("Chat Body", chatBody);
 
                 const controller = new AbortController();
 
@@ -473,7 +467,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                                     }
                                 }
 
-                                //console.log("Dispatching post procs: " + postProcessingCallbacks.length);
+                                console.log("Dispatching post procs: " + postProcessingCallbacks.length);
                                 postProcessingCallbacks.forEach(callback => callback({
                                     plugin: plugin,
                                     chatBody: chatBody,
@@ -610,8 +604,6 @@ export const Chat = memo(({stopConversationRef}: Props) => {
 
         function runPrompt(prompt: Prompt) {
 
-            runPromptEvent(prompt);
-
             const variables = parseEditableVariables(prompt.content);
 
             if (variables.length > 0) {
@@ -627,7 +619,6 @@ export const Chat = memo(({stopConversationRef}: Props) => {
             // This should all be refactored into a separate module at some point
             // ...should really be looking up the handler by category/action and passing
 
-            customLinkClickEvent(message, href);
 
             // it some sort of context
             if (selectedConversation) {

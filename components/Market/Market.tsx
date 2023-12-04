@@ -46,7 +46,6 @@ import {FolderInterface} from "@/types/folder";
 import {Prompt} from "@/types/prompt";
 import {ExampleChat} from "@/components/Market/components/ExampleChat";
 import {saveFolders} from "@/utils/app/folders";
-import useStatsService from "@/services/eventService";
 
 interface Props {
     items: MarketItem[];
@@ -111,8 +110,6 @@ export const Market = ({items}: Props) => {
         dispatch: homeDispatch,
     } = useContext(HomeContext);
 
-    const statsService = useStatsService();
-    const { startConversationEvent, tryMarketItemEvent } = statsService;
 
     const noOpImportFetcher: ImportFetcher = async () => {
         return {success: false, message: "No Op", data: null};
@@ -267,8 +264,6 @@ export const Market = ({items}: Props) => {
 
     const handleGetItem = async (item: MarketItem) => {
 
-        statsService.installMarketItemEvent(item);
-
         const marketItemFetcher: ImportFetcher = async () => {
             const response = await getItem(item.id);
 
@@ -287,8 +282,6 @@ export const Market = ({items}: Props) => {
     }
 
     const handleTryItem = async (item: MarketItem) => {
-
-        statsService.tryMarketItemEvent(item);
 
         const marketItemFetcher: ImportFetcher = async () => {
             const response = await getItem(item.id);
@@ -471,7 +464,7 @@ If people need help with prompt engineering, which is how you converse effective
         //homeDispatch({ field: 'prompts', value: updatedPrompts });
 
         //savePrompts(updatedPrompts);
-        startConversationEvent(startTutorialPrompt);
+
         handleStartConversationWithPrompt(handleNewConversation, updatedPrompts, startTutorialPrompt);
     }
 
@@ -494,8 +487,6 @@ If people need help with prompt engineering, which is how you converse effective
         const category = item.category;
         const id = item.id;
 
-        statsService.viewMarketItemEvent(item);
-
         setIsLoading(true);
 
         getItemExamples(category, id).then((data) => {
@@ -516,7 +507,6 @@ If people need help with prompt engineering, which is how you converse effective
 
     const doTryItem = async (consersations: Conversation[], folders: FolderInterface[], itemPrompts: Prompt[]) => {
         if (itemPrompts.length > 0) {
-            startConversationEvent(itemPrompts[0]);
             handleStartConversationWithPrompt(handleNewConversation, [...prompts, ...itemPrompts], itemPrompts[0]);
         } else {
             alert("There are no prompts to try in this market item.");
@@ -589,6 +579,7 @@ If people need help with prompt engineering, which is how you converse effective
                                 importButtonLabel={"Try"}
                                 onImport={
                                     () => {
+                                        alert("Try market item.");
                                         setShowMarketItemTryModal(false);
                                     }
                                 }
@@ -808,10 +799,80 @@ If people need help with prompt engineering, which is how you converse effective
                             <ExampleChat key={index} messages={example.conversation.messages.slice(1)}/>
                             </>
                         ))}
-                        </>)}
+                    </div>
+                </>
+            </div>
+        ) :
+        (
+            <div className="relative flex-1 overflow-hidden bg-white dark:bg-[#343541]">
+                <>
+                    <div
+                        className="max-h-full overflow-x-hidden"
+                    >
+                        <div>
 
-                        {!showExample && (
-                            <>
+                            {showMarketItemTryModal && (
+                                <ImportAnythingModal
+                                    title={"Try Market Item"}
+                                    importButtonLabel={"Try"}
+                                    onImport={
+                                        () => {
+                                            alert("Try market item.");
+                                            setShowMarketItemTryModal(false);
+                                        }
+                                    }
+                                    onCancel={
+                                        () => {
+                                            setShowMarketItemTryModal(false);
+                                        }
+                                    }
+                                    customImportFn={async (conversations, folders, prompts) => {
+                                        doTryItem(conversations, folders, prompts);
+                                        setShowMarketItemTryModal(false);
+                                    }}
+                                    includeConversations={false}
+                                    includePrompts={false}
+                                    includeFolders={false}
+                                    importKey={""}
+                                    importFetcher={importFetcher}
+                                    note={marketItemDescription}/>
+                            )}
+
+                            {showMarketItemInstallModal && (
+                                <ImportAnythingModal
+                                    title={"Install Market Item"}
+                                    importButtonLabel={"Install"}
+                                    onImport={
+                                        () => {
+                                            alert("Market item installed.");
+                                            setShowMarketItemInstallModal(false);
+                                        }
+                                    }
+                                    onCancel={
+                                        () => {
+                                            setShowMarketItemInstallModal(false);
+                                        }
+                                    }
+                                    includeConversations={true}
+                                    includePrompts={true}
+                                    includeFolders={true}
+                                    importKey={""}
+                                    importFetcher={importFetcher}
+                                    note={marketItemDescription}/>
+                            )}
+
+                            {/*{showSettings && (*/}
+                            {/*    <div*/}
+                            {/*        className="flex flex-col space-y-10 md:mx-auto md:max-w-xl md:gap-6 md:py-3 md:pt-6 lg:max-w-2xl lg:px-0 xl:max-w-3xl">*/}
+                            {/*        <div*/}
+                            {/*            className="flex h-full flex-col space-y-4 border-b border-neutral-200 p-4 dark:border-neutral-600 md:rounded-lg md:border">*/}
+                            {/*            <ModelSelect/>*/}
+                            {/*        </div>*/}
+                            {/*    </div>*/}
+                            {/*)}*/}
+
+                            {getNav()}
+
                             <section className="bg-gray-50 dark:bg-gray-900">
                                 <div
                                     className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 grid lg:grid-cols-2 gap-8 lg:gap-16">

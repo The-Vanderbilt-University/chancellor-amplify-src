@@ -43,7 +43,6 @@ import saveState from "@/services/stateService";
 import {useUser} from '@auth0/nextjs-auth0/client';
 import { createExport } from "@/utils/app/importExport";
 import {MessageType} from "@/types/chat";
-import useStatsService from "@/services/eventService";
 
 interface Props {
     prompt: Prompt;
@@ -58,8 +57,6 @@ export const PromptComponent = ({prompt}: Props) => {
         handleSharePrompt,
     } = useContext(PromptbarContext);
 
-    const { startConversationEvent } = useStatsService();
-
     const {
         state: {prompts, defaultModelId, showPromptbar, apiKey},
         dispatch: homeDispatch,
@@ -70,6 +67,7 @@ export const PromptComponent = ({prompt}: Props) => {
 
     const [showShareModal, setShowShareModal] = useState(false);
 
+    const {sendChatRequest} = useChatService();
 
     const closeModal = () => {
         setShowShareModal(false);
@@ -119,8 +117,6 @@ export const PromptComponent = ({prompt}: Props) => {
 
     const handleStartConversation = (startPrompt: Prompt) => {
 
-
-        startConversationEvent(startPrompt);
         handleStartConversationWithPrompt(handleNewConversation, prompts, startPrompt);
 
         // let prompt = startPrompt;

@@ -26,7 +26,6 @@ import { ChatbarInitialState, initialState } from './Chatbar.state';
 
 import { v4 as uuidv4 } from 'uuid';
 import {FolderInterface} from "@/types/folder";
-import useStatsService from "@/services/eventService";
 
 export const Chatbar = () => {
   const { t } = useTranslation('sidebar');
@@ -42,8 +41,6 @@ export const Chatbar = () => {
     handleNewConversation,
     handleUpdateConversation,
   } = useContext(HomeContext);
-
-  const statsService = useStatsService();
 
   const {
     state: { searchTerm, filteredConversations },
@@ -86,8 +83,6 @@ export const Chatbar = () => {
     const updatedConversations = conversations.filter(
       (c) => c.id !== conversation.id,
     );
-
-    statsService.deleteConversationEvent(conversation);
 
     homeDispatch({ field: 'conversations', value: updatedConversations });
     chatDispatch({ field: 'searchTerm', value: '' });
@@ -134,9 +129,6 @@ export const Chatbar = () => {
   };
 
   useEffect(() => {
-
-    statsService.openConversationsEvent();
-
     if (searchTerm) {
 
       statsService.searchConversationsEvent(searchTerm);
@@ -188,8 +180,7 @@ export const Chatbar = () => {
           chatDispatch({ field: 'searchTerm', value: searchTerm })
         }
         toggleOpen={handleToggleChatbar}
-        handleCreateItem={() => {
-          handleNewConversation({})}}
+        handleCreateItem={() => handleNewConversation({})}
         handleCreateFolder={() => {
           const name = window.prompt("Folder name:");
           handleCreateFolder(name || "New Folder", 'chat')

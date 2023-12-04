@@ -27,7 +27,6 @@ import {RAG} from "@/components/Chatbar/components/RAG";
 import {ShareAnythingModal} from "@/components/Share/ShareAnythingModal";
 import {Prompt} from "@/types/prompt";
 import {FolderInterface} from "@/types/folder";
-import useStatsService from "@/services/eventService";
 
 export const SettingsBar = () => {
     const { t } = useTranslation('sidebar');
@@ -35,8 +34,6 @@ export const SettingsBar = () => {
     const chatBarContextValue = useCreateReducer<ChatbarInitialState>({
         initialState,
     });
-
-    const statsService = useStatsService();
 
     const [isShareDialogVisible, setIsShareDialogVisible] = useState(false);
     const [sharedConversations, setSharedConversations] = useState<Conversation[]>([])
@@ -50,10 +47,6 @@ export const SettingsBar = () => {
     const {
         dispatch: chatDispatch,
     } = chatBarContextValue;
-
-    useEffect(() => {
-        statsService.openSettingsEvent();
-    },[]);
 
     const handleApiKeyChange = useCallback(
         (apiKey: string) => {

@@ -24,7 +24,6 @@ import HomeContext from "@/pages/api/home/home.context";
 import {saveWorkspaceMetadata} from "@/utils/app/settings";
 import {Workspace} from "@/types/workspace";
 import {v4} from "uuid";
-import useStatsService from "@/services/eventService";
 
 type SharedItemsListProps = {};
 
@@ -66,14 +65,9 @@ const WorkspaceList: FC<SharedItemsListProps> = () => {
         clearWorkspace
     } = useContext(HomeContext);
 
-    const statsService = useStatsService();
-
     const fetchData = async () => {
         try {
             if (user?.name) {
-
-                statsService.openWorkspacesEvent();
-
                 try {
                     const result = await getSharedItems(user.name);
 
