@@ -50,11 +50,14 @@ import {WorkflowDefinition} from "@/types/workflow";
 import {saveWorkflowDefinitions} from "@/utils/app/workflows";
 import {findWorkflowPattern} from "@/utils/workflow/aiflow";
 import SharedItemsList from "@/components/Share/SharedItemList";
-import {Features} from "@/types/features";
 import {saveFeatures} from "@/utils/app/features";
 import {findParametersInWorkflowCode} from "@/utils/workflow/workflow";
 import WorkspaceList from "@/components/Workspace/WorkspaceList";
 import {Market} from "@/components/Market/Market";
+import useStatsService from "@/services/eventService";
+import {getBasePrompts} from "@/services/basePromptsService";
+import {LatestExportFormat} from "@/types/export";
+import {importData} from "@/utils/app/importExport";
 
 const LoadingIcon = styled(Icon3dCubeSphere)`
   color: lightgray;
@@ -80,12 +83,13 @@ const Home = ({
     const [initialRender, setInitialRender] = useState<boolean>(true);
     const {user, error: userError, isLoading} = useUser();
 
+
     const contextValue = useCreateReducer<HomeInitialState>({
         initialState,
     });
 
 
-
+    const statsService = useStatsService();
 
     const {
         state: {
@@ -108,7 +112,7 @@ const Home = ({
     const {data, error, refetch} = useQuery(
         ['GetModels', apiKey, serverSideApiKeyIsSet],
         ({signal}) => {
-            if (!apiKey && !serverSideApiKeyIsSet) return null;
+            if (!apiKey && !serverSideApiKeyIsSet && !user) return null;
 
             return getModels(
                 {
@@ -119,6 +123,27 @@ const Home = ({
         },
         {enabled: true, refetchOnMount: false},
     );
+
+
+    useEffect(() => {
+        const fetchPrompts = async () => {
+            const basePrompts = await getBasePrompts();
+            if(basePrompts.success) {
+                const {history, folders, prompts}: LatestExportFormat = importData(basePrompts.data);
+
+                console.log("Imported base prompts, conversations, and folders: ", prompts, history, folders);
+
+                dispatch({field: 'conversations', value: history});
+                dispatch({field: 'folders', value: folders});
+                dispatch({field: 'prompts', value: prompts});
+            }
+            else {
+                console.log("Failed to import base prompts.");
+            }
+        }
+
+        fetchPrompts();
+    },[]);
 
     useEffect(() => {
         if (data) dispatch({field: 'models', value: data});
@@ -276,6 +301,8 @@ const Home = ({
             promptTemplate: null,
             ...params
         };
+
+        statsService.createConversationEvent(newConversation);
 
         const updatedConversations = [...conversations, newConversation];
 

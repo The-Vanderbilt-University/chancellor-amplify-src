@@ -59,6 +59,7 @@ import {ShareAnythingModal} from "@/components/Share/ShareAnythingModal";
 import {Assistant, DEFAULT_ASSISTANT} from "@/types/assistant";
 import { sendChat as assistantChat } from "@/services/assistantService";
 import {DownloadModal} from "@/components/Download/DownloadModal";
+import useStatsService from "@/services/eventService";
 
 interface Props {
     stopConversationRef: MutableRefObject<boolean>;
@@ -66,6 +67,11 @@ interface Props {
 
 export const Chat = memo(({stopConversationRef}: Props) => {
         const {t} = useTranslation('chat');
+
+        const statsService = useStatsService();
+        const { runPromptEvent,
+            sendChatRewriteEvent,
+            customLinkClickEvent } = statsService;
 
         const {
             state: {
@@ -109,6 +115,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
         const messagesEndRef = useRef<HTMLDivElement>(null);
         const chatContainerRef = useRef<HTMLDivElement>(null);
         const textareaRef = useRef<HTMLTextAreaElement>(null);
+        const modelSelectRef = useRef<HTMLDivElement>(null);
 
         const [isWorkflowMode, setWorkflowMode] = useState<boolean>();
 
@@ -254,7 +261,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                     temperature: selectedConversation.temperature,
                 };
 
-                console.log("Chat Body", chatBody);
+                sendChatRewriteEvent(chatBody, updateIndex);
 
                 const controller = new AbortController();
 
@@ -340,6 +347,13 @@ export const Chat = memo(({stopConversationRef}: Props) => {
             }
         }, [selectedConversation]);
 
+
+        const scrollToModelSelect = useCallback(() => {
+
+            if (modelSelectRef.current) {
+                modelSelectRef.current.scrollIntoView({behavior: 'smooth'});
+            }
+        }, []);
 
         const handleSend = useCallback(
             async (message: Message, deleteCount = 0, plugin: Plugin | null = null, existingResponse = null, rootPrompt:string|null = null) => {
@@ -459,7 +473,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                                     }
                                 }
 
-                                console.log("Dispatching post procs: " + postProcessingCallbacks.length);
+                                //console.log("Dispatching post procs: " + postProcessingCallbacks.length);
                                 postProcessingCallbacks.forEach(callback => callback({
                                     plugin: plugin,
                                     chatBody: chatBody,
@@ -596,6 +610,8 @@ export const Chat = memo(({stopConversationRef}: Props) => {
 
         function runPrompt(prompt: Prompt) {
 
+            runPromptEvent(prompt);
+
             const variables = parseEditableVariables(prompt.content);
 
             if (variables.length > 0) {
@@ -611,6 +627,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
             // This should all be refactored into a separate module at some point
             // ...should really be looking up the handler by category/action and passing
 
+            customLinkClickEvent(message, href);
 
             // it some sort of context
             if (selectedConversation) {
@@ -1400,7 +1417,12 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                                         : {selectedConversation?.temperature} |
                                         <button
                                             className="ml-2 cursor-pointer hover:opacity-50"
-                                            onClick={handleSettings}
+                                            onClick={(e)=>{
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                scrollToModelSelect();
+                                                handleSettings();
+                                            }}
                                         >
                                             <IconSettings size={18}/>
                                         </button>
@@ -1428,6 +1450,7 @@ export const Chat = memo(({stopConversationRef}: Props) => {
                                             <IconDownload size={18}/>
                                         </button>
                                     </div>
+                                    <div ref={modelSelectRef}></div>
                                     {showSettings && (
                                         <div
                                             className="flex flex-col space-y-10 md:mx-auto md:max-w-xl md:gap-6 md:py-3 md:pt-6 lg:max-w-2xl lg:px-0 xl:max-w-3xl">

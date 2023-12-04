@@ -2,10 +2,10 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getAccessToken, withApiAuthRequired } from "@auth0/nextjs-auth0";
 
 
-const marketOp = withApiAuthRequired(
+const basePromptOp = withApiAuthRequired(
     async (req: NextApiRequest, res: NextApiResponse) => {
 
-        let apiUrl = process.env.MARKET_API_URL || "";
+        let apiUrl = process.env.STATE_API_URL || "";
 
         // Accessing itemData parameters from the request
         const reqData = req.body;
@@ -13,8 +13,6 @@ const marketOp = withApiAuthRequired(
         const op = reqData.op;
 
         apiUrl = apiUrl + op;
-
-        console.log("apiUrl: ", apiUrl, " op: ", op, " payload: ", payload);
 
         try {
             const { accessToken } = await getAccessToken(req, res);
@@ -28,16 +26,16 @@ const marketOp = withApiAuthRequired(
                 },
             });
 
-            if (!response.ok) throw new Error(`Market op:${op} failed with status: ${response.status}`);
+            if (!response.ok) throw new Error(`Convert op:${op} failed with status: ${response.status}`);
 
             const data = await response.json();
 
             res.status(200).json(data);
         } catch (error) {
-            console.error("Error calling assistant: ", error);
-            res.status(500).json({ error: `Could not perform market op:${op}` });
+            console.error("Error calling download: ", error);
+            res.status(500).json({ error: `Could not perform download op:${op}` });
         }
     }
 );
 
-export default marketOp;
+export default basePromptOp;

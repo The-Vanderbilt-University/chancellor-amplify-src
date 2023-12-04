@@ -11,6 +11,7 @@ import {IconDownload} from '@tabler/icons-react';
 import styled, {keyframes} from "styled-components";
 import {FiCommand} from "react-icons/fi";
 import {ConversionOptions, convert} from "@/services/downloadService";
+import useStatsService from "@/services/eventService";
 
 export interface DownloadModalProps {
     onDownloadReady: (url: string) => void;
@@ -59,6 +60,8 @@ export const DownloadModal: FC<DownloadModalProps> = (
         state: {prompts, conversations, folders},
     } = useContext(HomeContext);
 
+    const statsService = useStatsService();
+
     const {user} = useUser();
 
     // Individual states for selected prompts, conversations, and folders
@@ -83,8 +86,14 @@ export const DownloadModal: FC<DownloadModalProps> = (
 
     const powerPointTemplateOptions = [
         "none",
-        "vandy_1.pptx",
-        "template_vapor.pptx"
+        "vanderbilt_1.pptx",
+        "celestial.pptx",
+        "frame.pptx",
+        "gallery.pptx",
+        "integral.pptx",
+        "ion.pptx",
+        "parcel.pptx",
+        "vapor.pptx"
     ];
 
     const wordTemplateOptions = [
@@ -258,6 +267,8 @@ export const DownloadModal: FC<DownloadModalProps> = (
 
             const result = await convert(conversionOptions, sharedData);
 
+            statsService.downloadItemEvent(conversionOptions, sharedData);
+
             let resultArrived = false;
             let triesLeft = 60;
 
@@ -417,6 +428,7 @@ export const DownloadModal: FC<DownloadModalProps> = (
                                             onChange={(e) => {
                                                 if(e.target.value === 'pptx'){
                                                     setTemplateOptions(powerPointTemplateOptions);
+                                                    setTemplateSelection("vanderbilt_1.pptx");
                                                 }
                                                 else {
                                                     setTemplateOptions(wordTemplateOptions);

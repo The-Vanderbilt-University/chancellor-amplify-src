@@ -22,6 +22,7 @@ import {ShareAnythingModal} from "@/components/Share/ShareAnythingModal";
 import {ImportAnythingModal} from "@/components/Share/ImportAnythingModal";
 import HomeContext from "@/pages/api/home/home.context";
 import {ShareAnythingToMarketModal} from "@/components/Share/ShareAnythingToMarketModal";
+import useStatsService from "@/services/eventService";
 
 type SharedItemsListProps = {};
 
@@ -50,10 +51,12 @@ const LoadingIcon = styled(FiCommand)`
 const SharedItemsList: FC<SharedItemsListProps> = () => {
 
     const {dispatch: homeDispatch} = useContext(HomeContext);
+    const statsService = useStatsService();
 
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isMarketModalOpen, setIsMarketModalOpen] = useState<boolean>(false);
     const [importModalOpen, setImportModalOpen] = useState<boolean>(false);
+    const [sharedBy, setSharedBy] = useState<string>("");
     const [selectedKey, setSelectedKey] = useState<string>("");
     const [selectedNote, setSelectedNote] = useState<string>("");
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -63,6 +66,8 @@ const SharedItemsList: FC<SharedItemsListProps> = () => {
     useEffect(() => {
         const name = user?.name;
 
+        statsService.openSharedItemsEvent();
+
         const fetchData = async () => {
             try {
                 if (name) {
@@ -71,6 +76,8 @@ const SharedItemsList: FC<SharedItemsListProps> = () => {
 
                         if (result.ok) {
                             const items = await result.json();
+
+                            console.log("items", items);
 
                             const grouped = groupBy('sharedBy', items.item);
                             setGroupedItems(grouped);
@@ -101,7 +108,8 @@ const SharedItemsList: FC<SharedItemsListProps> = () => {
 
             {importModalOpen && (
                 <ImportAnythingModal
-                    onImport={() => {
+                    onImport={(sharedData) => {
+                        statsService.sharedItemAcceptedEvent(sharedBy, selectedNote, sharedData);
                         setImportModalOpen(false);
                     }}
                     onCancel={() => {
@@ -144,6 +152,7 @@ const SharedItemsList: FC<SharedItemsListProps> = () => {
                     <button
                         className="text-sidebar flex w-full flex-shrink-0 cursor-pointer select-none items-center gap-3 rounded-md border dark:border-white/20 p-3 dark:text-white transition-colors duration-200 hover:bg-neutral-200 dark:hover:bg-gray-500/10"
                         onClick={() => {
+                            statsService.openMarketEvent();
                             homeDispatch({field: 'page', value: 'market'})
                         }}
                     >
@@ -198,6 +207,7 @@ const SharedItemsList: FC<SharedItemsListProps> = () => {
                                 key={index}
                                 className="flex w-full cursor-pointer items-center gap-3 rounded-lg pb-2 pt-3 pr-2 text-sm transition-colors duration-200 hover:bg-neutral-200 dark:hover:bg-[#343541]/90"
                                 onClick={() => {
+                                    setSharedBy(item.sharedBy);
                                     handleFetchShare(item);
                                 }}
                             >
