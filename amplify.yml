@@ -9,7 +9,7 @@ frontend:
         - env | grep -e  OPENAI_API_HOST >> .env.production
         - env | grep -e  OPENAI_API_TYPE >> .env.production
         - env | grep -e  OPENAI_API_VERSION >> .env.production
-        - env | grep -e  AZURE_DEPLOYMENT_ID >> .env.
+        - env | grep -e  AZURE_DEPLOYMENT_ID >> .env.production
         - env | grep -e  AZURE_API_NAME >> .env.production
         - env | grep -e  AUTH0_AUDIENCE >> .env.production
         - env | grep -e  AUTH0_SCOPE >> .env.production
