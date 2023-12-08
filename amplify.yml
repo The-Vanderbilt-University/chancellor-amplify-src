@@ -28,6 +28,10 @@ frontend:
         - env | grep -e  COGNITO_CLIENT_ID >> .env.production
         - env | grep -e  COGNITO_CLIENT_SECRET >> .env.production
         - env | grep -e  COGNITO_ISSUER >> .env.production
+        - env | grep -e  CONVERT_API_URL >> .env.production
+        - env | grep -e  MARKET_API_URL >> .env.production
+        - env | grep -e  ASSISTANT_API_URL >> .env.production
+        - env | grep -e  FILES_API_URL >> .env.production
 
         - npm ci
 
